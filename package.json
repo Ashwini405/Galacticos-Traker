@@ -1,0 +1,13 @@
+{
+  "name": "galacticos-tracker",
+  "version": "1.0.0",
+  "scripts": {
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start",
+    "dev": "start cmd /k \"cd server && npm start\" & start cmd /k \"cd client && npm run dev\""
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}

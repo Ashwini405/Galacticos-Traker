@@ -1,0 +1,46 @@
+{
+  "clients": [
+    {
+      "id": 1223,
+      "name": "Aazam"
+    },
+    {
+      "id": 1222,
+      "name": "Akella Sri Satya Vijay"
+    },
+    {
+      "id": 1247,
+      "name": "Amul Gupta"
+    },
+    {
+      "id": 44,
+      "name": "Anagha Soft"
+    },
+    {
+      "id": 48,
+      "name": "AnaghaSoft"
+    }
+  ],
+  "office_modes": [
+    {
+      "id": 86,
+      "name": "Anagha Soft"
+    },
+    {
+      "id": 51,
+      "name": "AnaghaSoft"
+    },
+    {
+      "id": 53,
+      "name": "Fint"
+    },
+    {
+      "id": 2,
+      "name": "Hybrid"
+    },
+    {
+      "id": 100,
+      "name": "Infosys"
+    }
+  ]
+}
