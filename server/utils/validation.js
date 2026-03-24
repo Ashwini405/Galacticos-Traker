@@ -18,7 +18,12 @@ export const EXPECTED_COLUMNS = {
   current_ctc: { dbField: 'current_ctc', required: false, aliases: ['current ctc', 'ctc', 'current_ctc'] },
   expected_ctc: { dbField: 'expected_ctc', required: false, aliases: ['expected ctc', 'ectc', 'expected', 'expected_ctc'] },
   recruiter: { dbField: 'recruiter_id', required: false, aliases: ['recruiter', 'assigned to', 'recruiter_name'] },
-  job_location: { dbField: 'job_location', required: false, aliases: ['job location', 'work location', 'job locat'] }
+job_location: { dbField: 'job_location', required: false, aliases: ['job location', 'work location', 'job locat'] },
+  submission_date: { 
+    dbField: 'submission_date', 
+    required: false, 
+    aliases: ['submission date', 'submission_date', 'submitted', 'date submitted', 'sub date', 'submitted date', 'date'] 
+  }
 };
 
 // Location keywords to reject in name field

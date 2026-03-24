@@ -389,6 +389,9 @@ export default function Candidates() {
           const funnelStageValue = String(getColumnValue(row, 'RECRUITMENT FUNNEL', 'Funnel Stage') || '').split('-')[1]?.trim() || getColumnValue(row, 'RECRUITMENT FUNNEL', 'Funnel Stage');
           const funnelStageId = await findIdByName(masterData.funnel_stages, funnelStageValue);
           
+          const recruiterValue = getColumnValue(row, 'RECRUITER', 'Recruiter', 'EXPECTED RECRUITER', 'ASSIGNED RECRUITER', 'ASSIGNED TO');
+          const recruiterId = await findIdByName(masterData.recruiters, recruiterValue, 'recruiter');
+
           const parsedRow = {
             name: getColumnValue(row, 'NAME', 'Name') || "",
             email: getColumnValue(row, 'EMAIL', 'Email') || "",
@@ -403,9 +406,9 @@ export default function Candidates() {
             offer_status: getColumnValue(row, 'OFFER STATUS', 'Offer Status') || 'Pending',
             job_location: getColumnValue(row, 'JOB LOCATION', 'Job Location') || "",
             submission_date: getColumnValue(row, 'SUBMISSION DATE', 'Submission Date') || "",
-            current_ctc: getColumnValue(row, 'CURRENT CTC', 'Current CTC') || "",
-            expected_ctc: getColumnValue(row, 'EXPECTED CTC', 'Expected CTC') || "",
-            recruiter_id: masterData.recruiters[0]?.id || null
+            current_ctc: getColumnValue(row, 'CURRENT CTC', 'Current CTC', 'CTC', 'CURRENT SALARY', 'CURRENT') || "",
+            expected_ctc: getColumnValue(row, 'EXPECTED CTC', 'Expected CTC', 'ECTC', 'EXPECTED SALARY', 'EXPECTED') || "",
+            recruiter_id: recruiterId || masterData.recruiters[0]?.id || null
           };
           
           if (contractTypeValue) {

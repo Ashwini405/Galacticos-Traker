@@ -186,40 +186,41 @@ export default function Candidates() {
   const exportExcel = async () => {
     console.log("Starting export for all candidates...");
     
-    // Calculate total pages (assuming limit is 10 as per server)
-    const limit = 10;
-    const totalPages = Math.ceil(total / limit);
-    
     let allData = [];
     
-    // Fetch all pages
-    for (let page = 1; page <= totalPages; page++) {
-      const queryParams = new URLSearchParams();
-      
-      // Apply the same filters as current view
-      if (appliedFilters.search) queryParams.append('search', appliedFilters.search);
-      if (appliedFilters.role_id) queryParams.append('role_id', appliedFilters.role_id);
-      if (appliedFilters.recruiter_id) queryParams.append('recruiter_id', appliedFilters.recruiter_id);
-      if (appliedFilters.client_id) queryParams.append('client_id', appliedFilters.client_id);
-      if (appliedFilters.stage_id) queryParams.append('stage_id', appliedFilters.stage_id);
-      if (appliedFilters.experience) queryParams.append('experience', appliedFilters.experience);
-      
-      queryParams.append('sortBy', sortBy);
-      queryParams.append('page', page);
-      
-      try {
-        const res = await apiFetch(`/candidates?${queryParams.toString()}`);
-        const resData = await res.json();
-        if (resData.candidates) {
-          allData = allData.concat(resData.candidates);
-        }
-      } catch (err) {
-        console.error(`Error fetching page ${page}:`, err);
-        // Continue with other pages
+    const queryParams = new URLSearchParams();
+    if (appliedFilters.search) queryParams.append('search', appliedFilters.search);
+    if (appliedFilters.role_id) queryParams.append('role_id', appliedFilters.role_id);
+    if (appliedFilters.recruiter_id) queryParams.append('recruiter_id', appliedFilters.recruiter_id);
+    if (appliedFilters.client_id) queryParams.append('client_id', appliedFilters.client_id);
+    if (appliedFilters.stage_id) queryParams.append('stage_id', appliedFilters.stage_id);
+    if (appliedFilters.experience) queryParams.append('experience', appliedFilters.experience);
+    
+    queryParams.append('sortBy', sortBy);
+    queryParams.append('limit', 'all');
+    
+    try {
+      const res = await apiFetch(`/candidates?${queryParams.toString()}`);
+      const resData = await res.json();
+      if (resData.candidates) {
+        allData = resData.candidates;
       }
+    } catch (err) {
+      console.error(`Error fetching candidates for export:`, err);
+      alert("Failed to export candidates. Please try again.");
+      return;
     }
     
     console.log("All data for export:", allData);
+    
+    // Fix for MySQL zero dates ('0000-00-00') causing Invalid Date in UI
+    const formatSubmissionDate = (dateStr) => {
+      if (!dateStr || dateStr === '0000-00-00' || dateStr === '' || dateStr === null || dateStr === undefined) {
+        return 'Not Submitted';
+      }
+      const date = new Date(dateStr);
+      return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
+    };
     
     // Helper to get contract type name from the data
     const getContractType = (candidate) => {
@@ -247,8 +248,10 @@ export default function Candidates() {
       "Current CTC": c.current_ctc || 'N/A',
       "Expected CTC": c.expected_ctc || 'N/A',
       Recruiter: c.recruiter || 'N/A',
+      "Submission Date": formatSubmissionDate(c.submission_date),
       "Added On": new Date(c.created_at).toLocaleDateString()
     }));
+
 
     console.log("Export data with contract types:", exportData);
 
@@ -399,8 +402,14 @@ export default function Candidates() {
     current_ctc: { nameStr: 'Current CTC', required: false, aliases: ['current ctc', 'ctc', 'current_ctc'] },
     expected_ctc: { nameStr: 'Expected CTC', required: false, aliases: ['expected ctc', 'ectc', 'expected', 'expected_ctc'] },
     recruiter: { nameStr: 'Recruiter', required: false, aliases: ['recruiter', 'assigned to', 'recruiter_name'] },
-    job_location: { nameStr: 'Job Location', required: false, aliases: ['job location', 'work location', 'job locat'] }
+    job_location: { nameStr: 'Job Location', required: false, aliases: ['job location', 'work location', 'job locat'] },
+    submission_date: { 
+      nameStr: 'Submission Date', 
+      required: false, 
+      aliases: ['submission date', 'submission_date', 'submitted', 'date submitted', 'sub date', 'submitted date', 'date'] 
+    }
   };
+
 
   const handleImport = (e) => {
     const file = e.target.files[0];
@@ -607,9 +616,9 @@ export default function Candidates() {
             contract_type_id: contractTypeId,
             offer_status: getVal('offer_status') || 'Pending',
             job_location: getVal('job_location') || "",
-            submission_date: "",
-            current_ctc: "",
-            expected_ctc: "",
+            submission_date: getVal('submission_date') || null,
+            current_ctc: getVal('current_ctc') || "",
+            expected_ctc: getVal('expected_ctc') || "",
             recruiter_id: recruiterId || null,
             isValid: true,
             validationErrors: [],
@@ -834,6 +843,7 @@ export default function Candidates() {
                   <th className="px-6 py-4">{t("RECRUITMENT FUNNEL")}</th>
                   <th className="px-6 py-4 hidden lg:table-cell">Recruiter</th>
                   <th className="px-6 py-4 hidden lg:table-cell">Contract Type</th>
+                  <th className="px-6 py-4 hidden lg:table-cell">Offer Status</th>
                   <th className="px-6 py-4 hidden lg:table-cell">Experience</th>
                   <th className="px-6 py-4 hidden lg:table-cell">Skills</th>
                   <th className="px-6 py-4 hidden lg:table-cell">Client Feedback</th>
@@ -885,6 +895,17 @@ export default function Candidates() {
                       </td>
                       <td className="px-6 py-5 hidden lg:table-cell">{c.recruiter}</td>
                       <td className="px-6 py-5 hidden lg:table-cell">{displayContractType(c)}</td>
+                      <td className="px-6 py-5 hidden lg:table-cell">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
+                          c.offer_status === 'Active' ? 'bg-green-50 text-green-700 border-green-200' : 
+                          c.offer_status === 'Offered' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
+                          c.offer_status === 'Joined' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 
+                          c.offer_status === 'Dropped' ? 'bg-red-50 text-red-700 border-red-200' : 
+                          'bg-gray-50 text-gray-700 border-gray-200'
+                        }`}>
+                          {c.offer_status || 'Pending'}
+                        </span>
+                      </td>
                       <td className="px-6 py-5 hidden lg:table-cell">{c.experience ? `${c.experience} Years` : "-"}</td>
                       <td className="px-6 py-5 hidden lg:table-cell">
                         <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wide"> <span className="text-gray-700 font-bold">{c.primary_skills || "-"}</span></div>

@@ -81,6 +81,15 @@ export default function CandidateModal({ candidate, onClose }) {
     const tabs = ['Overview', 'Comments', 'Interviews', 'Activity'];
 
     // UI Helper for the Overview Grid
+    // Fix for MySQL zero dates ('0000-00-00') causing Invalid Date in UI
+    const formatSubmissionDate = (dateStr) => {
+      if (!dateStr || dateStr === '0000-00-00' || dateStr === '' || dateStr === null || dateStr === undefined) {
+        return 'Not Submitted';
+      }
+      const date = new Date(dateStr);
+      return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
+    };
+
     const DataField = ({ label, value, highlight = false }) => (
         <div className="py-2 border-b border-gray-50 last:border-0">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-0.5">{label}</p>
@@ -148,7 +157,7 @@ export default function CandidateModal({ candidate, onClose }) {
                                 <DataField label="Phone Number" value={candidate.phone} />
                                 <DataField label="Current Location" value={candidate.location} />
                                 <DataField label="Total Experience" value={`${candidate.experience || 0} Years`} />
-                                <DataField label="Submission Date" value={candidate.submission_date ? new Date(candidate.submission_date).toLocaleDateString() : 'Not Submitted'} />
+                                <DataField label="Submission Date" value={formatSubmissionDate(candidate.submission_date)} />
                             </section>
 
                             {/* Professional & Salary (Using data mapped in GET request) */}
@@ -172,6 +181,7 @@ export default function CandidateModal({ candidate, onClose }) {
                                 </h3>
                                 <DataField label="Client Account" value={candidate.client} />
                                 <DataField label="Assigned Recruiter" value={candidate.recruiter} />
+                                <DataField label="Offer Status" value={candidate.offer_status || 'Pending'} />
                                 <DataField label="Job Location" value={candidate.job_location || 'Remote'} />
                                 <div className="mt-4">
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Funnel Stage</p>

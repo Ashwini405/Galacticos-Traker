@@ -34,7 +34,8 @@ export default function AddCandidate() {
     current_ctc: "",
     job_location: "",
     submission_date: "",
-    recruiter_id: ""
+    recruiter_id: "",
+    offer_status: "Pending"
   });
 
   useEffect(() => {
@@ -388,6 +389,23 @@ export default function AddCandidate() {
                 {masterData.recruiters?.map(rec => (
                   <option key={rec.id} value={rec.id}>{rec.name}</option>
                 ))}
+              </select>
+            </div>
+
+            <div>
+              <label className={labelClass}>Offer Status</label>
+              <select
+                name="offer_status"
+                className={inputClass}
+                onChange={handleChange}
+                value={form.offer_status}
+                required
+              >
+                <option value="Pending">Pending</option>
+                <option value="Active">Active</option>
+                <option value="Offered">Offered</option>
+                <option value="Joined">Joined</option>
+                <option value="Dropped">Dropped</option>
               </select>
             </div>
           </div>

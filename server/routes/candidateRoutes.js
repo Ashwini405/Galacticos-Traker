@@ -212,7 +212,7 @@ router.post("/bulk", verifyToken, (req, res) => {
     parseInt(c.job_role_id) || null, parseInt(c.client_id) || null, parseInt(c.office_mode_id) || null, 
     parseInt(c.funnel_stage_id) || null, parseInt(c.contract_type_id) || null,
     c.expected_ctc?.trim() || null, c.current_ctc?.trim() || null, c.job_location?.trim() || null,
-    c.submission_date || null, parseInt(c.recruiter_id) || null
+    (c.submission_date ? (c.submission_date.includes('-') ? c.submission_date.split('-').reverse().join('-') : c.submission_date) : null) || null, parseInt(c.recruiter_id) || null
   ]);
 
   global.db.query(insertQuery, [values], (err, result) => {

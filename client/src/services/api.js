@@ -12,7 +12,7 @@ export const apiFetch = async (url, options = {}) => {
 
 const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 const response = await fetch(`${baseUrl}${url}`, {
-
+    cache: 'no-store',
     ...options,
     headers
   });

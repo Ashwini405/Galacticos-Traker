@@ -742,11 +742,22 @@ app.post("/interviews", verifyToken, verifyHR, (req, res) => {
   );
 });
 
-app.get("/candidates", verifyToken, (req, res) => {
-  const { search, role_id, stage_id, client_id, location, experience, sortBy, recruiter_id, page = 1 } = req.query;
+app.get("/debug-exp", (req, res) => {
+  db.query("SELECT id, name, experience FROM candidates LIMIT 20", (err, result) => {
+    if (err) {
+      console.log("DEBUG ERR:", err);
+      return res.json(err);
+    }
+    console.log("DEBUG EXP RESULTS:", result);
+    res.json(result);
+  });
+});
 
-  const limit = 10;
-  const offset = (parseInt(page) - 1) * limit;
+app.get("/candidates", verifyToken, (req, res) => {
+  const { search, role_id, stage_id, client_id, location, experience, sortBy, recruiter_id, page = 1, limit: queryLimit } = req.query;
+
+  const limit = queryLimit === 'all' ? null : (parseInt(queryLimit) || 10);
+  const offset = (parseInt(page) - 1) * (limit || 10);
 
   let query = `
     SELECT 
@@ -823,10 +834,10 @@ app.get("/candidates", verifyToken, (req, res) => {
   }
 
   if (experience) {
-    query += " AND c.experience >= ?";
-    countQuery += " AND c.experience >= ?";
-    params.push(experience);
-    countParams.push(experience);
+    query += " AND CAST(c.experience AS UNSIGNED) >= ?";
+    countQuery += " AND CAST(c.experience AS UNSIGNED) >= ?";
+    params.push(parseInt(experience, 10));
+    countParams.push(parseInt(experience, 10));
   }
 
   // Sorting
@@ -841,10 +852,10 @@ app.get("/candidates", verifyToken, (req, res) => {
       query += " ORDER BY c.name DESC";
       break;
     case "exp_high":
-      query += " ORDER BY c.experience DESC";
+      query += " ORDER BY CAST(c.experience AS UNSIGNED) DESC";
       break;
     case "exp_low":
-      query += " ORDER BY c.experience ASC";
+      query += " ORDER BY CAST(c.experience AS UNSIGNED) ASC";
       break;
     default:
       query += " ORDER BY c.id DESC"; // newest
@@ -852,16 +863,24 @@ app.get("/candidates", verifyToken, (req, res) => {
 
   // Get total count first
   db.query(countQuery, countParams, (countErr, countResult) => {
-    if (countErr) return res.status(500).json(countErr);
+    if (countErr) {
+      console.error("GET /candidates COUNT QUERY ERROR:", countErr, countQuery, countParams);
+      return res.status(500).json(countErr);
+    }
     
     const total = countResult[0].total;
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = limit ? Math.ceil(total / limit) : 1;
     const currentPage = parseInt(page);
     
-    query += " LIMIT " + parseInt(limit) + " OFFSET " + parseInt(offset);
+    if (limit) {
+      query += " LIMIT " + parseInt(limit) + " OFFSET " + parseInt(offset);
+    }
 
     db.query(query, params, (err, result) => {
-      if (err) return res.status(500).json(err);
+      if (err) {
+        console.error("GET /candidates MAIN QUERY ERROR:", err, query, params);
+        return res.status(500).json(err);
+      }
       res.json({
         candidates: result,
         total: total,
@@ -949,9 +968,25 @@ app.post("/candidates/bulk", verifyToken, verifyHR, (req, res) => {
 
   const sql = `
     INSERT INTO candidates 
-    (name, email, phone, location, experience, job_role_id, client_id, office_mode_id, funnel_stage_id, contract_type_id, offer_status, current_ctc, expected_ctc, recruiter_id)
+    (name, email, phone, location, experience, job_role_id, client_id, office_mode_id, funnel_stage_id, contract_type_id, offer_status, current_ctc, expected_ctc, recruiter_id, job_location, submission_date)
     VALUES ?
   `;
+
+  const parseDate = (d) => {
+    if (!d) return null;
+    const str = String(d).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    if (/^\d{2}-\d{2}-\d{4}$/.test(str)) return str.split('-').reverse().join('-');
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) return str.split('/').reverse().join('-');
+    if (!isNaN(Number(str)) && Number(str) > 20000) {
+      // Excel serial date approx
+      const date = new Date((Number(str) - (25567 + 2)) * 86400 * 1000);
+      if (!isNaN(date.getTime())) return date.toISOString().split('T')[0];
+    }
+    const dObj = new Date(str);
+    if (!isNaN(dObj.getTime())) return dObj.toISOString().split('T')[0];
+    return null;
+  };
 
   const values = candidates.map(c => [
     c.name,
@@ -967,7 +1002,9 @@ app.post("/candidates/bulk", verifyToken, verifyHR, (req, res) => {
     c.offer_status || 'Pending',
     c.current_ctc || '',
     c.expected_ctc || '',
-    c.recruiter_id
+    c.recruiter_id,
+    c.job_location || '',
+    parseDate(c.submission_date)
   ]);
 
   db.query(sql, [values], (err, result) => {
@@ -1114,17 +1151,34 @@ app.put("/candidates/:id", verifyToken, verifyAdmin, upload.single("resume"), lo
     primary_skills, secondary_skills,
     job_role_id, client_id, office_mode_id,
     funnel_stage_id, contract_type_id,
-    offer_status, expected_ctc, current_ctc, job_location, recruiter_id
+    offer_status, expected_ctc, current_ctc, job_location, recruiter_id, submission_date
   } = req.body;
 
   const resume_url = req.file ? req.file.path : null;
 
   let sql = `
     UPDATE candidates 
-    SET name=?, email=?, phone=?, location=?, experience=?, primary_skills=?, secondary_skills=?, job_role_id=?, client_id=?, office_mode_id=?, funnel_stage_id=?, contract_type_id=?, offer_status=?, expected_ctc=?, current_ctc=?, job_location=?, recruiter_id=?
+    SET name=?, email=?, phone=?, location=?, experience=?, primary_skills=?, secondary_skills=?, job_role_id=?, client_id=?, office_mode_id=?, funnel_stage_id=?, contract_type_id=?, offer_status=?, expected_ctc=?, current_ctc=?, job_location=?, recruiter_id=?, submission_date=?
   `;
   const params = [
-    name, email, phone, location, experience, primary_skills, secondary_skills, job_role_id, client_id, office_mode_id, funnel_stage_id, contract_type_id, offer_status || 'Pending', expected_ctc, current_ctc, job_location, recruiter_id
+    name, 
+    email, 
+    phone, 
+    location, 
+    experience === "" ? null : experience, 
+    primary_skills, 
+    secondary_skills, 
+    job_role_id || null, 
+    client_id || null, 
+    office_mode_id || null, 
+    funnel_stage_id || null, 
+    contract_type_id || null, 
+    offer_status || 'Pending', 
+    expected_ctc, 
+    current_ctc, 
+    job_location, 
+    recruiter_id || null,
+    submission_date || null
   ];
 
   // Add resume_url to the query if a new file was uploaded

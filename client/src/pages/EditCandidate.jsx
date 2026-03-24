@@ -38,7 +38,8 @@ export default function EditCandidate() {
         current_ctc: "",
         job_location: "",
         submission_date: "",
-        recruiter_id: ""
+        recruiter_id: "",
+        offer_status: "Pending"
     });
 
     useEffect(() => {
@@ -77,8 +78,9 @@ export default function EditCandidate() {
                     expected_ctc: candidate.expected_ctc || "",
                     current_ctc: candidate.current_ctc || "",
                     job_location: candidate.job_location || "",
-                    submission_date: candidate.submission_date || "",
-                    recruiter_id: candidate.recruiter_id || md.recruiters?.[0]?.id || ""
+                    submission_date: candidate.submission_date ? String(candidate.submission_date).split('T')[0] : "",
+                    recruiter_id: candidate.recruiter_id || md.recruiters?.[0]?.id || "",
+                    offer_status: candidate.offer_status || "Pending"
                 });
                 setFetching(false);
             })
@@ -431,6 +433,23 @@ export default function EditCandidate() {
                                 {masterData.recruiters?.map(rec => (
                                     <option key={rec.id} value={rec.id}>{rec.name}</option>
                                 ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className={labelClass}>Offer Status</label>
+                            <select
+                                name="offer_status"
+                                className={inputClass}
+                                onChange={handleChange}
+                                value={form.offer_status}
+                                required
+                            >
+                                <option value="Pending">Pending</option>
+                                <option value="Active">Active</option>
+                                <option value="Offered">Offered</option>
+                                <option value="Joined">Joined</option>
+                                <option value="Dropped">Dropped</option>
                             </select>
                         </div>
                     </div>
