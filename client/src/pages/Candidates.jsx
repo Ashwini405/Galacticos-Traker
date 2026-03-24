@@ -632,9 +632,9 @@ export default function Candidates() {
 
         // Show Real-time Import Validation Preview instead of automatically firing
         setImportPreviewData(parsedCandidates);
-
-        // Show Real-time Import Validation Preview instead of automatically firing
-        setImportPreviewData(parsedCandidates);
+        
+        // Clear file input so the same file can be selected again
+        if (fileInputRef.current) fileInputRef.current.value = "";
 
       } catch (error) {
         console.error("Import parsing error:", error);
