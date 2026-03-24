@@ -122,7 +122,10 @@ console.log("DB CONFIG:", {
   ssl: process.env.DB_SSL
 });
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
+  family: 4, // Forces Nodemailer to resolve IPv4 addresses specifically (bypassing ENETUNREACH in Node 17+)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
